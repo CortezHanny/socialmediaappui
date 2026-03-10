@@ -93,9 +93,9 @@ class KdramaVideoTile extends StatefulWidget {
   State<KdramaVideoTile> createState() => _KdramaVideoTileState();
 }
 
-class _KdramaVideoTileState extends State<KdramaVideoTile> {
-  VideoPlayerController? _controller;
+class _KdramaVideoTileState extends State<KdramaVideoTile> {VideoPlayerController? _controller;
   bool _isInitialized = false;
+  bool _isLiked = false;
 
   @override
   void initState() {
@@ -198,38 +198,173 @@ class _KdramaVideoTileState extends State<KdramaVideoTile> {
     );
   }
 
-  Widget _buildSideActions() {
-    return Positioned(
-      right: 15,
-      bottom: 30,
-      child: Column(
-        children: [
-          _buildActionButton(Icons.favorite, widget.post.likes.toString()),
-          _buildActionButton(Icons.comment, "124"),
-          _buildActionButton(Icons.share, "Share"),
-        ],
-      ),
-    );
-  }
+Widget _buildSideActions() {
+  return Positioned(
+    right: 15,
+    bottom: 30,
+    child: Column(
+      children: [// Like Button
+        _buildActionButton(
+          icon: _isLiked ? Icons.favorite : Icons.favorite,
+          color: _isLiked ? Colors.red : Colors.white,
+          label: widget.post.likes.toString(),
+          onTap: () {
+            setState(() {
+              _isLiked = !_isLiked;
+            });
+          },
+        ),
+        // Comment Button
+        _buildActionButton(
+          icon: Icons.comment,
+          label: "124",
+          onTap: () => _showComments(context),
+        ),
+        _buildActionButton(
+          icon: Icons.share,
+          label: "Share",
+          onTap: () {},
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildActionButton(IconData icon, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+// Modified helper to handle clicks and colors
+Widget _buildActionButton({
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+  Color color = Colors.white,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: GestureDetector(
+      onTap: onTap,
       child: Column(
         children: [
-          Icon(icon, size: 35, color: Colors.white),
+          Icon(icon, size: 35, color: color),
           const SizedBox(height: 5),
           Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
-// --- Rest of your app (main, MyApp, MainNavigation, etc.) stays the same ---
+// --- COMMENT CHAT MODAL ---
+void _showComments(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.grey[900],
+    isScrollControlled: true, // Allows keyboard to push content up
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Text("Comments", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Divider(color: Colors.white24),
+            Expanded(
+              child: ListView.builder(
+                itemCount: 5,
+                itemBuilder: (context, index) => ListTile(
+                  leading: const CircleAvatar(backgroundColor: Colors.blueGrey),
+                  title: Text("User $index", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("This drama is so good! Can't wait for next episode.",
+                      style: TextStyle(color: Colors.white70)),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: "Add a comment...",
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  suffixIcon: const Icon(Icons.send, color: Colors.blue),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+} // <--- THIS BRACE CLOSES THE _KdramaVideoTileState CLASS
+
 // --- APP ENTRY POINT ---
 void main() {
   runApp(const MyApp());
+}
+
+// --- COMMENT CHAT MODAL ---
+void _showComments(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.grey[900],
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return Container(
+        height: MediaQuery
+            .of(context)
+            .size
+            .height * 0.6,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Text("Comments",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Divider(color: Colors.white24),
+            Expanded(
+              child: ListView.builder(
+                itemCount: 5,
+                itemBuilder: (context, index) =>
+                    ListTile(
+                      leading: const CircleAvatar(
+                          backgroundColor: Colors.blueGrey),
+                      title: Text("User $index", style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: const Text(
+                          "This drama is so good! Can't wait for next episode.",
+                          style: TextStyle(color: Colors.white70)),
+                    ),
+              ),
+            ),
+            // Fake Input Field
+            Container(
+              padding: EdgeInsets.only(bottom: MediaQuery
+                  .of(context)
+                  .viewInsets
+                  .bottom),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: "Add a comment...",
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  suffixIcon: const Icon(Icons.send, color: Colors.blue),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -240,18 +375,16 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        // Fixes the GoogleFonts error from earlier
         textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.dark().textTheme),
       ),
-      // REMOVED 'const' here to avoid the error if constructor isn't ready
-      home: MainNavigation(),
+      home: const MainNavigation(),
     );
   }
 }
 
-// --- MAIN NAVIGATION (The Bottom Bar Logic) ---
+// --- MAIN NAVIGATION ---
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key}); // Added const constructor
+  const MainNavigation({super.key});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -260,13 +393,12 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  // List of screens
   final List<Widget> _screens = [
     const HomeScreen(),
     const Center(child: Text("Discover")),
     const Center(child: Text("Upload")),
     const Center(child: Text("Inbox")),
-    const ProfileScreen(), // This is the screen that opens when clicking Profile
+    const ProfileScreen(),
   ];
 
   @override
@@ -296,7 +428,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 }
 
-// --- HOME SCREEN (The Feed) ---
+// --- HOME SCREEN ---
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -328,7 +460,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// --- PROFILE SCREEN (The "Inside" View) ---
+// --- PROFILE SCREEN ---
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -397,4 +529,3 @@ class _StatTile extends StatelessWidget {
     );
   }
 }
-// ... Add your MainNavigation, HomeScreen, and ProfileScreen here as per your current file ...
