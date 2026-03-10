@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// 1. DATA MODEL
+import 'package:video_player/video_player.dart';// 1. DATA MODEL (Added videoUrl field)
 class Post {
   final String username;
   final String userImage;
   final String dramaTitle;
   final String postImage;
+  final String? videoUrl; // Optional: Only for video posts
   final String caption;
   final int likes;
   final String audioName;
@@ -16,22 +16,24 @@ class Post {
     required this.userImage,
     required this.dramaTitle,
     required this.postImage,
+    this.videoUrl, // Can be null
     required this.caption,
     required this.likes,
     required this.audioName,
   });
 }
 
-// 2. MOCK DATA (Your Kdrama Trends)
+// 2. MOCK DATA (One video, the rest are images)
 final List<Post> kdramaPosts = [
   Post(
-    username: "kdrama_queen",
-    userImage: "https://i.pravatar.cc/150?u=1",
-    dramaTitle: "Business Proposal",
-    postImage: "https://wallpapers.com/images/hd/business-proposal-kdrama-poster-x0rod0gmpuznd9bz.jpg",
-    caption: "The chemistry in this scene was unmatched! 💍 #businessproposal #kdrama",
-    likes: 4500,
-    audioName: "Love, Maybe - MeloMance",
+    username: "kdrama_lover_2024",
+    userImage: "https://i.pravatar.cc/150?u=5",
+    dramaTitle: "Boyfriend On-Demand",
+    videoUrl: "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4", // This is a video post
+    postImage: "https://th.bing.com/th?id=OIF.y%2fFwxunz0S15JTU8Nv8nbw&rs=1&pid=ImgDetMain",
+    caption: "Imagine having a boyfriend on-demand... 🧸✨ #BoyfriendOnDemand",
+    likes: 8900,
+    audioName: "Sweet Romance - OST Part 1",
   ),
   Post(
     username: "oppa_central",
@@ -61,16 +63,171 @@ final List<Post> kdramaPosts = [
     audioName: "Jeju Island - Folk Version",
   ),
   Post(
+    username: "kdrama_queen",
+    userImage: "https://i.pravatar.cc/150?u=1",
+    dramaTitle: "Business Proposal",
+    videoUrl: null, // This is a static image post
+    postImage: "https://wallpapers.com/images/hd/business-proposal-kdrama-poster-x0rod0gmpuznd9bz.jpg",
+    caption: "The chemistry in this scene was unmatched! 💍 #businessproposal",
+    likes: 4500,
+    audioName: "Love, Maybe - MeloMance",
+  ),
+  Post(
     username: "sol_sunjae_fan",
     userImage: "https://i.pravatar.cc/150?u=12",
     dramaTitle: "Lovely Runner",
+    videoUrl: null, // This is a static image post
     postImage: "https://static1.srcdn.com/wordpress/wp-content/uploads/2024/05/lovely-runner-2024.jpg",
-    caption: "Would you travel back in time to save the person you love? 🕒💛 This drama is pure perfection! #LovelyRunner #ByeonWooSeok #KimHyeYoon",
+    caption: "Would you travel back in time to save the person you love? 🕒💛",
     likes: 32100,
     audioName: "Sudden Shower - ECLIPSE",
   ),
 ];
 
+// --- UPDATED VIDEO/IMAGE TILE ---
+class KdramaVideoTile extends StatefulWidget {
+  final Post post;
+  const KdramaVideoTile({super.key, required this.post});
+
+  @override
+  State<KdramaVideoTile> createState() => _KdramaVideoTileState();
+}
+
+class _KdramaVideoTileState extends State<KdramaVideoTile> {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Only initialize video if videoUrl is provided
+    if (widget.post.videoUrl != null) {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.post.videoUrl!))
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() {
+              _isInitialized = true;
+              _controller!.setLooping(true);
+              _controller!.play();
+            });
+          }
+        });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        if (_controller != null && _controller!.value.isInitialized) {
+          setState(() {
+            _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+          });
+        }
+      },
+      child: Stack(
+        children: [
+          // BACKGROUND: Show Video if available and ready, otherwise show Image
+          SizedBox.expand(
+            child: (widget.post.videoUrl != null && _isInitialized)
+                ? FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: _controller!.value.size.width,
+                height: _controller!.value.size.height,
+                child: VideoPlayer(_controller!),
+              ),
+            )
+                : Image.network(widget.post.postImage, fit: BoxFit.cover),
+          ),
+
+          // Play/Pause Overlay Icon (Only for videos)
+          if (widget.post.videoUrl != null && _isInitialized && !_controller!.value.isPlaying)
+            const Center(child: Icon(Icons.play_arrow, size: 80, color: Colors.white54)),
+
+          // UI Overlays
+          _buildGradientOverlay(),
+          _buildPostDetails(context),
+          _buildSideActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGradientOverlay() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.black54, Colors.transparent, Colors.transparent, Colors.black87],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostDetails(BuildContext context) {
+    return Positioned(
+      left: 15,
+      bottom: 30,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("@${widget.post.username}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.7,
+            child: Text(widget.post.caption, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.music_note, size: 15, color: Colors.white),
+              const SizedBox(width: 5),
+              Text(widget.post.audioName, style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSideActions() {
+    return Positioned(
+      right: 15,
+      bottom: 30,
+      child: Column(
+        children: [
+          _buildActionButton(Icons.favorite, widget.post.likes.toString()),
+          _buildActionButton(Icons.comment, "124"),
+          _buildActionButton(Icons.share, "Share"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        children: [
+          Icon(icon, size: 35, color: Colors.white),
+          const SizedBox(height: 5),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Rest of your app (main, MyApp, MainNavigation, etc.) stays the same ---
+// --- APP ENTRY POINT ---
 void main() {
   runApp(const MyApp());
 }
@@ -83,13 +240,63 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
+        // Fixes the GoogleFonts error from earlier
         textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.dark().textTheme),
       ),
-      home: HomeScreen(),
+      // REMOVED 'const' here to avoid the error if constructor isn't ready
+      home: MainNavigation(),
     );
   }
 }
 
+// --- MAIN NAVIGATION (The Bottom Bar Logic) ---
+class MainNavigation extends StatefulWidget {
+  const MainNavigation({super.key}); // Added const constructor
+
+  @override
+  State<MainNavigation> createState() => _MainNavigationState();
+}
+
+class _MainNavigationState extends State<MainNavigation> {
+  int _selectedIndex = 0;
+
+  // List of screens
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const Center(child: Text("Discover")),
+    const Center(child: Text("Upload")),
+    const Center(child: Text("Inbox")),
+    const ProfileScreen(), // This is the screen that opens when clicking Profile
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.black,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: 'Discover'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_box, size: 40), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Inbox'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+}
+
+// --- HOME SCREEN (The Feed) ---
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -97,288 +304,97 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      // 1. Extend the body behind the App Bar
       extendBodyBehindAppBar: true,
-      // 2. Add the transparent App Bar with "Following | For You"
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Following',
-                style: TextStyle(fontSize: 16, color: Colors.white60)),
+            Text('Following', style: TextStyle(fontSize: 16, color: Colors.white60)),
             SizedBox(width: 15),
-            Text('For You',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('For You', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
           ],
         ),
       ),
       body: PageView.builder(
-        scrollDirection: Axis.vertical, // TikTok Style scroll
+        scrollDirection: Axis.vertical,
         itemCount: kdramaPosts.length,
         itemBuilder: (context, index) {
-          final post = kdramaPosts[index];
-          return Stack(
-            children: [
-              // Post Image Background
-              SizedBox.expand(
-                child: Image.network(post.postImage, fit: BoxFit.cover),
-              ),
-              // Overlay for better text visibility
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.black54, Colors.transparent, Colors.black87],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-              // UI elements (Right side actions)
-              Positioned(
-                right: 15,
-                bottom: 100,
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                          radius: 24,
-                          backgroundImage: NetworkImage(post.userImage)
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Icon(Icons.favorite, color: Colors.red, size: 40),
-                    Text('${post.likes}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(height: 20),
-                    const Icon(Icons.comment, color: Colors.white, size: 40),
-                    const Text('821', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(height: 20),
-                    const Icon(Icons.share, color: Colors.white, size: 35),
-                  ],
-                ),
-              ),
-              // Post Description
-              Positioned(
-                left: 15,
-                bottom: 40,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("@${post.username}",
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-                    const SizedBox(height: 5),
-                    Text(post.dramaTitle,
-                        style: const TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 5),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      child: Text(post.caption,
-                          style: const TextStyle(fontSize: 14, color: Colors.white)),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        const Icon(Icons.music_note, size: 15, color: Colors.white),
-                        const SizedBox(width: 5),
-                        Text(post.audioName,
-                            style: const TextStyle(fontSize: 13, color: Colors.white)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
+          return KdramaVideoTile(post: kdramaPosts[index]);
         },
       ),
-      // Optional: Add Bottom Navigation Bar for better TikTok look
-      bottomNavigationBar: BottomNavigationBar(
+    );
+  }
+}
+
+// --- PROFILE SCREEN (The "Inside" View) ---
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text("My Profile"),
         backgroundColor: Colors.black,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Discover'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box, size: 30), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Inbox'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 20),
+          const CircleAvatar(
+            radius: 50,
+            backgroundImage: NetworkImage("https://i.pravatar.cc/150?u=9"),
+          ),
+          const SizedBox(height: 15),
+          const Text("@kdrama_fan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 25),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _StatTile(label: "Following", value: "128"),
+              _StatTile(label: "Followers", value: "5.2k"),
+              _StatTile(label: "Likes", value: "12k"),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(2),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.8,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+              ),
+              itemCount: 12,
+              itemBuilder: (context, index) => Container(
+                color: Colors.grey[900],
+                child: const Icon(Icons.play_arrow_outlined, color: Colors.white24),
+              ),
+            ),
+          )
         ],
       ),
     );
   }
 }
 
-class KdramaVideoTile extends StatelessWidget {
-  final Post post;
-  const KdramaVideoTile({super.key, required this.post});
+class _StatTile extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatTile({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // 1. IMAGE BACKGROUND
-        SizedBox.expand(
-          child: Image.network(
-            post.postImage,
-            fit: BoxFit.cover,
-          ),
-        ),
-
-        // 2. GRADIENT OVERLAY
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.black54, Colors.transparent, Colors.transparent, Colors.black87],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-        ),
-
-        // 3. HORIZONTAL TRENDING SCROLLVIEW
-        Positioned(
-          top: 100,
-          left: 0,
-          right: 0,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: Row(
-              children: ["#Trending", "#LeeMinHo", "#NewDrama", "#OST", "#Romance"].map((tag) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.white)),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-
-        // 4. RIGHT SIDE ACTION BUTTONS
-        Positioned(
-          right: 15,
-          bottom: 110,
-          child: Column(
-            children: [
-              _buildProfileIcon(post.userImage),
-              const SizedBox(height: 20),
-              _buildActionButton(Icons.favorite, post.likes.toString(), Colors.red),
-              const SizedBox(height: 20),
-              _buildActionButton(Icons.comment, "428", Colors.white),
-              const SizedBox(height: 20),
-              _buildActionButton(Icons.share, "Share", Colors.white),
-              const SizedBox(height: 25),
-              _buildMusicDisc(),
-            ],
-          ),
-        ),
-
-        // 5. BOTTOM CONTENT (TEXT & INFO)
-        Positioned(
-          left: 15,
-          bottom: 30,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "@${post.username}",
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.7,
-                child: Text(
-                  post.caption,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.pinkAccent.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.movie_filter, color: Colors.pinkAccent, size: 16),
-                    const SizedBox(width: 5),
-                    Text(
-                      post.dramaTitle,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(Icons.music_note, color: Colors.white, size: 15),
-                  const SizedBox(width: 5),
-                  Text(post.audioName, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Helper Methods defined inside the class
-  Widget _buildProfileIcon(String url) {
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      clipBehavior: Clip.none,
-      children: [
-        CircleAvatar(
-          radius: 25,
-          backgroundColor: Colors.white,
-          child: CircleAvatar(
-            radius: 23,
-            backgroundImage: NetworkImage(url),
-          ),
-        ),
-        Positioned(
-          bottom: -5,
-          child: Container(
-            decoration: const BoxDecoration(color: Colors.pink, shape: BoxShape.circle),
-            child: const Icon(Icons.add, color: Colors.white, size: 15),
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String label, Color color) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 35),
-        const SizedBox(height: 5),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
       ],
-    );
-  }
-
-  Widget _buildMusicDisc() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        gradient: SweepGradient(colors: [Colors.grey.shade800, Colors.black]),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(Icons.music_note, color: Colors.white, size: 20),
     );
   }
 }
+// ... Add your MainNavigation, HomeScreen, and ProfileScreen here as per your current file ...
