@@ -94,109 +94,109 @@ class KdramaVideoTile extends StatefulWidget {
 }
 
 class _KdramaVideoTileState extends State<KdramaVideoTile> {VideoPlayerController? _controller;
-  bool _isInitialized = false;
-  bool _isLiked = false;
+bool _isInitialized = false;
+bool _isLiked = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Only initialize video if videoUrl is provided
-    if (widget.post.videoUrl != null) {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.post.videoUrl!))
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() {
-              _isInitialized = true;
-              _controller!.setLooping(true);
-              _controller!.play();
-            });
-          }
-        });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (_controller != null && _controller!.value.isInitialized) {
+@override
+void initState() {
+  super.initState();
+  // Only initialize video if videoUrl is provided
+  if (widget.post.videoUrl != null) {
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.post.videoUrl!))
+      ..initialize().then((_) {
+        if (mounted) {
           setState(() {
-            _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+            _isInitialized = true;
+            _controller!.setLooping(true);
+            _controller!.play();
           });
         }
-      },
-      child: Stack(
-        children: [
-          // BACKGROUND: Show Video if available and ready, otherwise show Image
-          SizedBox.expand(
-            child: (widget.post.videoUrl != null && _isInitialized)
-                ? FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: _controller!.value.size.width,
-                height: _controller!.value.size.height,
-                child: VideoPlayer(_controller!),
-              ),
-            )
-                : Image.network(widget.post.postImage, fit: BoxFit.cover),
-          ),
-
-          // Play/Pause Overlay Icon (Only for videos)
-          if (widget.post.videoUrl != null && _isInitialized && !_controller!.value.isPlaying)
-            const Center(child: Icon(Icons.play_arrow, size: 80, color: Colors.white54)),
-
-          // UI Overlays
-          _buildGradientOverlay(),
-          _buildPostDetails(context),
-          _buildSideActions(),
-        ],
-      ),
-    );
+      });
   }
+}
 
-  Widget _buildGradientOverlay() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.black54, Colors.transparent, Colors.transparent, Colors.black87],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-    );
-  }
+@override
+void dispose() {
+  _controller?.dispose();
+  super.dispose();
+}
 
-  Widget _buildPostDetails(BuildContext context) {
-    return Positioned(
-      left: 15,
-      bottom: 30,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("@${widget.post.username}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: MediaQuery.of(context).size.width * 0.7,
-            child: Text(widget.post.caption, style: const TextStyle(color: Colors.white, fontSize: 14)),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.music_note, size: 15, color: Colors.white),
-              const SizedBox(width: 5),
-              Text(widget.post.audioName, style: const TextStyle(color: Colors.white, fontSize: 12)),
-            ],
+@override
+Widget build(BuildContext context) {
+  return GestureDetector(
+    onTap: () {
+      if (_controller != null && _controller!.value.isInitialized) {
+        setState(() {
+          _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+        });
+      }
+    },
+    child: Stack(
+      children: [
+        // BACKGROUND: Show Video if available and ready, otherwise show Image
+        SizedBox.expand(
+          child: (widget.post.videoUrl != null && _isInitialized)
+              ? FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _controller!.value.size.width,
+              height: _controller!.value.size.height,
+              child: VideoPlayer(_controller!),
+            ),
           )
-        ],
+              : Image.network(widget.post.postImage, fit: BoxFit.cover),
+        ),
+
+        // Play/Pause Overlay Icon (Only for videos)
+        if (widget.post.videoUrl != null && _isInitialized && !_controller!.value.isPlaying)
+          const Center(child: Icon(Icons.play_arrow, size: 80, color: Colors.white54)),
+
+        // UI Overlays
+        _buildGradientOverlay(),
+        _buildPostDetails(context),
+        _buildSideActions(),
+      ],
+    ),
+  );
+}
+
+Widget _buildGradientOverlay() {
+  return Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Colors.black54, Colors.transparent, Colors.transparent, Colors.black87],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
       ),
-    );
-  }
+    ),
+  );
+}
+
+Widget _buildPostDetails(BuildContext context) {
+  return Positioned(
+    left: 15,
+    bottom: 30,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("@${widget.post.username}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.7,
+          child: Text(widget.post.caption, style: const TextStyle(color: Colors.white, fontSize: 14)),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            const Icon(Icons.music_note, size: 15, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(widget.post.audioName, style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ],
+        )
+      ],
+    ),
+  );
+}
 
 Widget _buildSideActions() {
   return Positioned(
@@ -298,6 +298,7 @@ void _showComments(BuildContext context) {
       );
     },
   );
+}
 } // <--- THIS BRACE CLOSES THE _KdramaVideoTileState CLASS
 
 // --- APP ENTRY POINT ---
