@@ -298,7 +298,6 @@ void _showComments(BuildContext context) {
       );
     },
   );
-}
 } // <--- THIS BRACE CLOSES THE _KdramaVideoTileState CLASS
 
 // --- APP ENTRY POINT ---
